@@ -4,7 +4,7 @@ from utils.db import get_daily_data, add_data
 from datetime import datetime, timedelta, timezone
 from utils.firebase_login import firebase_login
 
-FIREBASE_API_KEY = "AIzaSyB4c77hw6xX3JqRkSJ3OnYFJswOcwYDMCs"
+FIREBASE_API_KEY = st.secrets["FIREBASE_API_KEY"]  # ✅ Secure key from secrets
 
 st.set_page_config(page_title="Doctor Data System", layout="centered")
 st.title("Doctor Data Management System")
@@ -38,18 +38,19 @@ if 'user_id' not in st.session_state:
                     result = firebase_login(email, password, FIREBASE_API_KEY)
                     user_id = result["localId"]
                     st.session_state['user_id'] = user_id
+                    st.session_state['email'] = result["email"]  # ✅ Store email
 
                     # Load doctor name from Firestore
                     from firebase_admin import firestore
                     db = firestore.client()
                     doc = db.collection("doctors").document(user_id).get()
-                    st.session_state['doctor_name'] = doc.to_dict().get("name", "Doctor") if doc.exists else "Doctor"
+                    st.session_state['doctor_name'] = doc.to_dict().get("name", "") if doc.exists else ""
 
                     st.success("Logged in successfully!")
                     st.rerun()
 
                 except Exception as e:
-                    st.session_state.clear()  # ❗ Clear old session on login failure
+                    st.session_state.clear()
                     st.error(f"Login failed: {str(e)}")
             else:
                 st.error("Please enter email and password.")
@@ -72,7 +73,6 @@ if 'user_id' not in st.session_state:
                 try:
                     user_id = create_user(new_email, new_password, new_name)
 
-                    # Save additional info to Firestore
                     from firebase_admin import firestore
                     db = firestore.client()
                     db.collection("doctors").document(user_id).set({
@@ -87,6 +87,7 @@ if 'user_id' not in st.session_state:
 
                     st.session_state['user_id'] = user_id
                     st.session_state['doctor_name'] = new_name
+                    st.session_state['email'] = new_email  # ✅ Store email on signup
                     st.success("Account created successfully!")
                     st.rerun()
                 except Exception as e:
@@ -94,7 +95,8 @@ if 'user_id' not in st.session_state:
 
 # --- LOGGED-IN VIEW ---
 else:
-    st.success(f"Welcome, {st.session_state.get('doctor_name', st.session_state['user_id'])}")
+    doctor_display = st.session_state.get('doctor_name') or st.session_state.get('email', 'Doctor')
+    st.success(f"Welcome, {doctor_display}")  # ✅ Show name or fallback to email
 
     if st.button("Logout"):
         st.session_state.clear()
@@ -127,4 +129,3 @@ else:
                     aor_patients=aor_patients
                 )
                 st.success("Data saved successfully!")
-

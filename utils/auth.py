@@ -1,11 +1,12 @@
 import firebase_admin
 from firebase_admin import credentials, auth
-from pathlib import Path
+import streamlit as st
+import json
 
-# Initialize Firebase only once
+# Load credentials from Streamlit secrets
 if not firebase_admin._apps:
-    cred_path = Path(__file__).parent.parent / "serviceAccountKey.json"
-    cred = credentials.Certificate(str(cred_path))
+    cred_dict = json.loads(st.secrets["FIREBASE_KEY"])
+    cred = credentials.Certificate(cred_dict)
     firebase_app = firebase_admin.initialize_app(cred)
 else:
     firebase_app = firebase_admin.get_app()
